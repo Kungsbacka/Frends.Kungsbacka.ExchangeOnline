@@ -1,0 +1,10 @@
+﻿{
+	"Tasks": [
+		{
+			"TaskMethod": "Frends.Kungsbacka.ExchangeOnline.Exo.Connect"
+		},
+		{
+			"TaskMethod": "Frends.Kungsbacka.ExchangeOnline.Exo.InvokeCommand"
+		}
+	]
+}
