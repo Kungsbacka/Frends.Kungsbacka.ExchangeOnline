@@ -15,7 +15,7 @@ namespace Frends.Kungsbacka.ExchangeOnline
     {
         private Runspace _runspace;
         private bool _disposed;
-        private bool _initialized;
+        private bool _connected;
         private readonly string _organization;
         private readonly string _appId;
         private readonly X509Certificate2 _certificate;
@@ -32,64 +32,21 @@ namespace Frends.Kungsbacka.ExchangeOnline
             _organization = organization ?? throw new ArgumentNullException(nameof(organization));
             _appId = appId ?? throw new ArgumentNullException(nameof(appId));
             _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+            _connected = false;
         }
 
-        /// <summary>
-        /// Executes a command in a runspace connected to Exchange Online
-        /// via PowerShell remoting. 
-        /// </summary>
-        /// <param name="command">Command to execute (single command)</param>
-        /// <param name="parameters">Parameters</param>
-        /// <returns>JToken</returns>
-        public JToken InvokeCommand(string command, System.Collections.IDictionary parameters)
+        private void CreateRunspaceAndConnect()
         {
-            if (!_initialized)
-            {
-                CreateRunspaceAndConnect(false);
-            }
-
-            using PowerShell ps = PowerShell.Create();
-            ps.Runspace = _runspace;
-            ps  .AddCommand(command)
-                    .AddParameters(parameters)
-                .AddCommand("ConvertTo-Json")
-                    .AddParameter("Depth", 10)
-                    .AddParameter("Compress");
-            var result = ps.Invoke();
-            StringBuilder sb = new();
-            foreach (PSObject obj in result)
-            {
-                sb.Append(obj.ToString());
-            }
-
-            return JToken.Parse(sb.ToString());
-        }
-
-        /// <summary>
-        /// Connect to Exchange Online
-        /// </summary>
-        public void Connect()
-        {
-            if (!_initialized)
-            {
-                CreateRunspaceAndConnect(false);
-            }
-        }
-
-        private void CreateRunspaceAndConnect(bool force)
-        {
-            if (_initialized && !force)
+            if (_connected)
             {
                 return;
             }
 
             if (_runspace != null)
             {
-                _runspace.Dispose();
-                _runspace = null;
+                Dispose();
+                throw new InvalidOperationException("ExchangeSession object is in an invalid state.");
             }
-
-            _initialized = false;
 
             string script = @"
                 param ($Organization, $AppId, $Certificate)
@@ -113,8 +70,85 @@ namespace Frends.Kungsbacka.ExchangeOnline
                     ps.Streams.Error.Select(e => e.Exception).ToArray());
             }
 
-            _initialized = true;
+            _connected = true;
         }
+
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+            {
+                throw new ObjectDisposedException("PowerShell runspace is disposed. You must create a new ExchangeSession object.");
+            }
+        }
+
+        /// <summary>
+        /// Executes a command in a runspace connected to Exchange Online
+        /// via PowerShell remoting. 
+        /// </summary>
+        /// <param name="command">Command to execute (single command)</param>
+        /// <param name="parameters">Parameters</param>
+        /// <returns>JToken</returns>
+        public JToken InvokeCommand(string command, System.Collections.IDictionary parameters)
+        {
+            ThrowIfDisposed();
+            if (!_connected)
+            {
+                throw new InvalidOperationException("You must call Connect() before calling any other method.");
+            }
+
+            using PowerShell ps = PowerShell.Create();
+            ps.Runspace = _runspace;
+            ps.AddCommand(command)
+                    .AddParameters(parameters)
+                .AddCommand("ConvertTo-Json")
+                    .AddParameter("Depth", 10)
+                    .AddParameter("Compress")
+                    .AddParameter("ErrorAction", "SilentlyContinue");
+            var result = ps.Invoke();
+            StringBuilder sb = new();
+            foreach (PSObject obj in result)
+            {
+                sb.Append(obj.ToString());
+            }
+            if (sb.Length > 0)
+            {
+                return JToken.Parse(sb.ToString());
+
+            }
+            return new JObject();
+        }
+
+        /// <summary>
+        /// Connect to Exchange Online
+        /// </summary>
+        public void Connect()
+        {
+            ThrowIfDisposed();
+            if (!_connected)
+            {
+                CreateRunspaceAndConnect();
+            }
+        }
+
+        /// <summary>
+        /// Disconnect from Exchange Online
+        /// </summary>
+        public void Disconnect()
+        {
+            ThrowIfDisposed();
+            if (!_connected)
+            {
+                return;
+            }
+
+            using PowerShell ps = PowerShell.Create();
+            ps.Runspace = _runspace;
+            ps.AddCommand("Disconnect-ExchangeOnline")
+                .AddParameter("Confirm", false);
+            ps.Invoke();
+            Dispose();
+        }
+
         
         /// <summary>
         /// IDispose implementation

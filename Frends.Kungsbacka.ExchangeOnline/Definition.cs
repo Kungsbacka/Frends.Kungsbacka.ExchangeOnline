@@ -38,8 +38,26 @@ namespace Frends.Kungsbacka.ExchangeOnline
     public class ConnectResult
     {
         /// <summary>
-        /// ExchangeSession
+        /// ExchangeSession object
         /// </summary>
+        public ExchangeSession Session { get; set; }
+    }
+
+    /// <summary>
+    /// Disconnect does not give a result, but frends
+    /// does not accept a task that returns void.
+    /// </summary>
+    public class DisconnectResult { }
+
+    /// <summary>
+    /// Required parameters for Disconnect task
+    /// </summary>
+    public class DisconnectParameters
+    {
+        /// <summary>
+        /// Exchange session to disconnect
+        /// </summary>
+        [DisplayFormat(DataFormatString = "Expression")]
         public ExchangeSession Session { get; set; }
     }
 

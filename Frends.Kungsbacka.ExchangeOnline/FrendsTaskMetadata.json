@@ -4,6 +4,9 @@
 			"TaskMethod": "Frends.Kungsbacka.ExchangeOnline.Exo.Connect"
 		},
 		{
+			"TaskMethod": "Frends.Kungsbacka.ExchangeOnline.Exo.Disconnect"
+		},
+		{
 			"TaskMethod": "Frends.Kungsbacka.ExchangeOnline.Exo.InvokeCommand"
 		}
 	]

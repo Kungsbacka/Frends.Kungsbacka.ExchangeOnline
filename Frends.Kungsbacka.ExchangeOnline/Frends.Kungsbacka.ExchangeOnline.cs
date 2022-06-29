@@ -24,6 +24,20 @@ namespace Frends.Kungsbacka.ExchangeOnline
             return new ConnectResult() { Session = session };
         }
 
+        /// <summary>
+        /// Disconnect from Exchange Online. It's a good practice to disconnect
+        /// a session when it's not needed anymore since the number of connections
+        /// to Exchange Online are limited.
+        /// </summary>
+        /// <param name="input">Required parameters to disconnect</param>
+        /// <returns>(Nothing)</returns>
+        public static DisconnectResult Disconnect(DisconnectParameters input)
+        {
+            input.Session.Disconnect();
+            input.Session.Dispose();
+            input.Session = null;
+            return new DisconnectResult();
+        }
 
         /// <summary>
         /// Execute a command in the supplied session
